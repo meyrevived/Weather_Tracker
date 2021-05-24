@@ -18,17 +18,17 @@ The data should be collected from https://openweathermap.org/ site
 An example of a configuration JSON format file (frequency unit is seconds): 
 ```json
 [ 
-{ 
-"city_id": 2643743, 
-"city_name": "London", 
-"frequency": 20, 
-“threshold”:10 
-}, 
-{ 
-"city_id": 293397, 
-"city_name": "Tel Aviv", 
-"frequency": 60, 
-“threshold”:2 
-} 
-] 
+  { 
+    "city_id": 2643743, 
+    "city_name": "London", 
+    "frequency": 20, 
+    “threshold”:10 
+  }, 
+  { 
+    "city_id": 293397, 
+    "city_name": "Tel Aviv", 
+    "frequency": 60, 
+    “threshold”:2 
+  } 
+]
 ```
