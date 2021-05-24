@@ -1,0 +1,26 @@
+[
+  {
+    "city_id" : 2643743,
+    "city_name" : "London",
+    "frequency" : 30,
+    "threshold" : 2
+  },
+  {
+    "city_id" : 5179756,
+    "city_name" : "Belfast",
+    "frequency" : 30,
+    "threshold" : 4
+  },
+  {
+    "city_id" : 1705545,
+    "city_name" : "Los Angeles",
+    "frequency" : 30,
+    "threshold" : 4
+  },
+  {
+    "city_id" : 293397,
+    "city_name" : "Tel Aviv",
+    "frequency" : 30,
+    "threshold" : 10
+  }
+]
