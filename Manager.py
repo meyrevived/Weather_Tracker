@@ -1,95 +1,102 @@
 """
-Manager script.
+Manager object.
 Parses configuration JSON into internal variables.
 Creates CityWeather objects according to configurations in configuration JSON.
-Creates Monitors per CityWeather and sets them running.
+Creates Monitors per CityWeather.
+Has producer function which creates one run job per Monitor and sets them running if the time has come for them to
+run according to the frequency detailed in the configuration JSON.
+Has consumer function for timely terminating the Monitors' run jobs.
 """
 import json
 import time
+from datetime import datetime, timezone
+import threading
 
 from CityWeather import CityWeather
 from Monitor import Monitor
-
-"""
-Creates a Monitor with a CityWeather to handle.
-Takes the city_id, frequency, city_weather and threshold from a dictionary from configuration_json.
-Returns True.
-"""
+from Utilities import set_task_state_with_lock
 
 
-def create_monitor(city_weather, city_weather_dict):
-    return Monitor(city_weather_dict["frequency"], city_weather_dict["threshold"], city_weather)
+class Manager:
 
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.pool_size = 5
+        self.weather_config_json = []
+        self.monitors = []
+        self.jobs_queue = []
 
-"""
-Creates a CityWeather object with a city_id.
-Takes city_id from a dictionary from configuration_json.
-Returns True.
-"""
+    def configuration_parser(self, configuration_file):
+        """
+        Parses each dictionary in the configuration JSON and loads its values to city_id, city_name, frequency and
+        threshold.
+        Fetches the configuration JSON from the file system.
+        Takes each configuration section in the JSON file and turns it into a dictionary with the same data in the list
+        configuration_json.
+        Returns configuration_json.
+        """
+        try:
+            with open(configuration_file, 'r') as config_json:
+                config_data = json.load(config_json)
+                for item in config_data:
+                    item = {"city_id": item["city_id"], "city_name": item["city_name"],
+                            "frequency": item["frequency"], "threshold": item["threshold"]}
+                    self.weather_config_json.append(item)
+        except IOError as e:
+            print('{err} occurred when opening {f}'.format(err=repr(e), f=configuration_file))
+            return False
 
+    def producer_function(self, stop):
+        """
+        Producer function for making Monitors and to start running if it's time for them to run, and adding their thread
+        to jobs_queue.
+        Takes a Stop.
+        """
+        while not stop.stop_all:
+            now_utc = datetime.now(timezone.utc)
 
-def create_city_weather(city_weather_dict):
-    return CityWeather(city_weather_dict["city_id"])
+            for monitor in self.monitors:
+                delta_time = (now_utc - monitor.last_run_at).seconds
+                if not monitor.at_work and delta_time > monitor.frequency and len(self.jobs_queue) < self.pool_size:
+                    set_task_state_with_lock(self, monitor, True)
+                    job = threading.Thread(target=monitor.run_monitor, args=(stop, self))
+                    job.start()
+                    self.jobs_queue.append(job)
 
+            time.sleep(1)
+        else:
+            stop.say_goodbye()
+            exit()
 
-"""
-Parses each dictionary in the configuration JSON and loads its values to city_id, city_name, frequency and threshold.
-Fetches the configuration JSON from the file system. 
-Takes each configuration section in the JSON file and turns it into a dictionary with the same data in the list 
-configuration_json.
-Returns configuration_json.
-"""
+    def consumer_function(self, stop):
+        """
+        Consumer function for going over the the jobs of running Monitors and bringing them to a stop one by one.
+        Runs until stop.stop_all is set to True.
+        Takes a Stop.
+        """
+        while not stop.stop_all:
+            for job in self.jobs_queue:
+                job.join()
+                self.jobs_queue.remove(job)
+            time.sleep(1)
+        else:
+            stop.say_goodbye()
+            exit()
 
+    def employ_manager(self, config_file_path, run_api_key):
+        """
+        Runs the Manager functionality.
+        Checks that loading the configuration JSON was successful.
+        Creates a Monitor and a CityWeather according the data in each dictionary in configuration_parser's returned
+        configuration_json.
+        Sets each created Monitor running.
+        Takes the name of the configuration JSON and an ApiKey.
+        """
 
-def configuration_parser(configuration_file):
-    configuration_json = []
+        self.configuration_parser(config_file_path)
 
-    try:
-        with open(configuration_file, 'r') as config_json:
-            config_data = json.load(config_json)
-            for item in config_data:
-                item = {"city_id": item["city_id"], "city_name": item["city_name"],
-                        "frequency": item["frequency"], "threshold": item["threshold"]}
-                configuration_json.append(item)
-
-        return configuration_json
-    except IOError as e:
-        print('{err} occurred when opening {f}'.format(err=repr(e), f=configuration_file))
-        return False
-
-
-"""
-Runs the Manager functionality. 
-Checks that loading the configuration JSON was successful. 
-Creates a Monitor and a CityWeather according the data in each dictionary in configuration_parser's returned 
-configuration_json. 
-Sets each created Monitor running.
-Takes the name of the configuration JSON.
-"""
-
-
-def run_manager(config_file_path):
-    config_file = config_file_path
-    weather_config_json = configuration_parser(config_file)
-
-    monitor_threads = []
-
-    if weather_config_json:
-        for config_dict in weather_config_json:
-            city_weather_instance = create_city_weather(config_dict)
-            monitor = create_monitor(city_weather_instance, config_dict)
-            monitor.daemon = True
-            monitor_threads.append(monitor)
-
-    for monitor_thread in monitor_threads:
-        time.sleep(20)
-        monitor_thread.start()
-
-    try:
-        while True:
-            time.sleep(.1)
-    except (KeyboardInterrupt, SystemExit):
-        print()
-        print(49 * "X")
-        print("XXXXXX Thank you for using Weather Tracker! XXXXXX")
-        print(49 * "X")
+        if self.weather_config_json:
+            for config_dict in self.weather_config_json:
+                city_weather = CityWeather(config_dict["city_id"])
+                monitor = Monitor(config_dict["frequency"], config_dict["threshold"], city_weather, run_api_key)
+                self.monitors.append(monitor)
