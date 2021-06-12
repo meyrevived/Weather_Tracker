@@ -1,6 +1,17 @@
 # Weather_Tracker
 
-An application that monitors the weather in several cities.  The name of the cities and their monitored frequency should be define in a configuration file. For each city, the application should invoke a REST API call (based on its own frequency), parse the result  and print it into the console. 
+An application that monitors the weather in several cities.  
+The name of the cities and their monitored frequency are define in a JSON configuration file. For each city, the application invokes a REST API call (based on its own frequency), parse the result and print it into the console. The REST API call is sensitive to connection problems, hanging connections and code 429 errors.
+
+To run Weather_Tracker you need to run 'python main.py' and provide two parameters:
+
+1. Path to configuration JSON
+2. Api key for OpenWeather service
+
+**Example**:
+'python main.py multiCityExample.json 807771ebf2837876d37c50bc778dcccf'
+
+Each Weather Tracker can be stopped by entering **q**
 
 ## Details
 The following properties are collected and printed: 
@@ -13,9 +24,9 @@ The following properties are collected and printed:
 The samples occur simultaneously and do not block each other. 
 When the current sample’s temperature result is higher or lower than the previous one in X  percent (configurable, see threshold property bellow), a warning message is added to the printout. 
 
-The data should be collected from https://openweathermap.org/ site 
+The data is collected from https://openweathermap.org/ site 
 
-An example of a configuration JSON format file (frequency unit is seconds): 
+An example of a configuration JSON format file (frequency unit in seconds): 
 ```json
 [ 
   { 
