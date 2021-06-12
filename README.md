@@ -9,7 +9,7 @@ To run Weather_Tracker you need to run 'python main.py' and provide two paramete
 2. Api key for OpenWeather service
 
 **Example**:
-'python main.py multiCityExample.json 807771ebf2837876d37c50bc778dcccf'
+`python main.py multiCityExample.json 807771ebf2837876d37c50bc778dcccf`
 
 Each Weather Tracker can be stopped by entering **q**
 
